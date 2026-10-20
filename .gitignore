@@ -1,0 +1,36 @@
+# ------------------------------------------------------------
+# Python
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ------------------------------------------------------------
+# MERP raw data
+# ------------------------------------------------------------
+
+# Audio files are large and should not be committed
+data/MERP/audio/
+
+# Original dataset files
+data/MERP/*.parquet
+
+# Hugging Face/cache files
+.cache/
+huggingface/
+
+# ------------------------------------------------------------
+# Temporary files
+# ------------------------------------------------------------
+*.tmp
+*.log
