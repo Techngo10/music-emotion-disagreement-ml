@@ -1,5 +1,3 @@
-import numpy as np
-import pandas as pd
 from pathlib import Path
 
 # ============================================================
@@ -7,39 +5,35 @@ from pathlib import Path
 # ============================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 DATA_DIR = PROJECT_ROOT / "data" / "MERP"
 PROCESSED_DIR = DATA_DIR / "processed"
+
 RESULTS_DIR = PROJECT_ROOT / "results"
 TABLES_DIR = RESULTS_DIR / "tables"
 FIGURES_DIR = RESULTS_DIR / "figures"
 
+# Ensure generated-output folders exist.
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 TABLES_DIR.mkdir(parents=True, exist_ok=True)
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-
-
-from scipy.stats import spearmanr
-
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.linear_model import Ridge
-from sklearn.model_selection import KFold, GridSearchCV
-
-from sklearn.metrics import (
-    mean_absolute_error,
-    mean_squared_error,
-    r2_score
-)
 
 
 # ============================================================
 # SETTINGS
 # ============================================================
 
-INPUT_FILE = PROCESSED_DIR / "modelling_dataset.csv"
-OUTPUT_FILE = TABLES_DIR / "cv_stability_results.csv"
+DATA_FOLDER = "data/MERP"
+
+INPUT_FILE = (
+    PROCESSED_DIR
+    / "modelling_dataset.csv"
+)
+
+OUTPUT_FILE = (
+    TABLES_DIR
+    / "cv_stability_results.csv"
+)
 
 N_REPEATS = 10
 
