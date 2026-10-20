@@ -1,0 +1,8 @@
+numpy
+pandas
+scipy
+scikit-learn
+matplotlib
+pyarrow
+opensmile==2.6.0
+huggingface_hub
