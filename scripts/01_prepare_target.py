@@ -1,24 +1,30 @@
 import pandas as pd
 import numpy as np
-import os
+from pathlib import Path
+
+# ============================================================
+# PROJECT PATHS
+# ============================================================
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+RESULTS_DIR = PROJECT_ROOT / "results"
+TABLES_DIR = RESULTS_DIR / "tables"
+FIGURES_DIR = RESULTS_DIR / "figures"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
 
 # ---------------------------------------------------------
 # LOAD DATA
 # ---------------------------------------------------------
 
-DATA_FOLDER = "data/MERP"
-
-filtered = pd.read_parquet(
-    os.path.join(DATA_FOLDER, "annotations_filtered.parquet")
-)
-
-raw = pd.read_parquet(
-    os.path.join(DATA_FOLDER, "annotations_raw.parquet")
-)
-
-profiles = pd.read_parquet(
-    os.path.join(DATA_FOLDER, "rater_profiles.parquet")
-)
+filtered = pd.read_parquet(DATA_DIR / "annotations_filtered.parquet")
+raw = pd.read_parquet(DATA_DIR / "annotations_raw.parquet")
+profiles = pd.read_parquet(DATA_DIR / "rater_profiles.parquet")
 
 
 # ---------------------------------------------------------
@@ -159,9 +165,6 @@ def calculate_song_disagreement(group):
         "time_points":
             min(min_valence_length, min_arousal_length),
 
-        "duration_seconds":
-            min(min_valence_length, min_arousal_length) / 10,
-
         "mean_valence":
             np.mean(valence),
 
@@ -246,10 +249,7 @@ print(
 # 8. SAVE RESULTS
 # ---------------------------------------------------------
 
-output_path = os.path.join(
-    DATA_FOLDER,
-    "song_disagreement_summary.csv"
-)
+output_path = PROCESSED_DIR / "song_disagreement_summary.csv"
 
 project_songs.to_csv(
     output_path,

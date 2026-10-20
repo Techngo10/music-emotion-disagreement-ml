@@ -1,29 +1,32 @@
-import os
 import pandas as pd
+from pathlib import Path
+
+# ============================================================
+# PROJECT PATHS
+# ============================================================
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+RESULTS_DIR = PROJECT_ROOT / "results"
+TABLES_DIR = RESULTS_DIR / "tables"
+FIGURES_DIR = RESULTS_DIR / "figures"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
 from huggingface_hub import hf_hub_download
 
 # ============================================================
 # SETTINGS
 # ============================================================
 
-DATA_FOLDER = "data/MERP"
-
-ANNOTATION_FILE = os.path.join(
-    DATA_FOLDER,
-    "annotations_filtered.parquet"
-)
-
-AUDIO_FOLDER = os.path.join(
-    DATA_FOLDER,
-    "audio"
-)
-
+ANNOTATION_FILE = DATA_DIR / "annotations_filtered.parquet"
+AUDIO_FOLDER = DATA_DIR / "audio"
 REPO_ID = "amaai-lab/MERP"
 
-os.makedirs(
-    AUDIO_FOLDER,
-    exist_ok=True
-)
+AUDIO_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================
@@ -62,7 +65,7 @@ for i, song_id in enumerate(songs, start=1):
             repo_id=REPO_ID,
             repo_type="dataset",
             filename=filename,
-            local_dir=DATA_FOLDER
+            local_dir=DATA_DIR
         )
 
         print("Saved:", path)

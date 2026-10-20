@@ -1,6 +1,4 @@
-# ------------------------------------------------------------
 # Python
-# ------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *.pyo
@@ -15,22 +13,15 @@ env/
 .DS_Store
 Thumbs.db
 
-# ------------------------------------------------------------
-# MERP raw data
-# ------------------------------------------------------------
-
-# Audio files are large and should not be committed
+# MERP source data (download locally; do not commit)
 data/MERP/audio/
-
-# Original dataset files
+data/MERP/.cache/
 data/MERP/*.parquet
 
-# Hugging Face/cache files
+# Other caches
 .cache/
 huggingface/
 
-# ------------------------------------------------------------
 # Temporary files
-# ------------------------------------------------------------
 *.tmp
 *.log

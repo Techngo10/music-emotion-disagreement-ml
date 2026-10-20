@@ -1,6 +1,11 @@
 from huggingface_hub import hf_hub_download
 import pandas as pd
-import os
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 
 # ---------------------------------------------------------
 # MERP DATASET DOWNLOAD
@@ -17,9 +22,7 @@ files = [
 ]
 
 # Folder where the data will be stored
-data_folder = "data/MERP"
-
-os.makedirs(data_folder, exist_ok=True)
+data_folder = DATA_DIR
 
 print("Downloading MERP data files...\n")
 
@@ -221,10 +224,7 @@ print(merged.head())
 # SAVE MERGED DATA
 # ---------------------------------------------------------
 
-merged_path = os.path.join(
-    data_folder,
-    "merp_merged.parquet"
-)
+merged_path = DATA_DIR / "merp_merged.parquet"
 
 merged.to_parquet(
     merged_path,

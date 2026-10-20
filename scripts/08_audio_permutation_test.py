@@ -1,6 +1,22 @@
-import os
 import numpy as np
 import pandas as pd
+from pathlib import Path
+
+# ============================================================
+# PROJECT PATHS
+# ============================================================
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+RESULTS_DIR = PROJECT_ROOT / "results"
+TABLES_DIR = RESULTS_DIR / "tables"
+FIGURES_DIR = RESULTS_DIR / "figures"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
 import matplotlib.pyplot as plt
 
 from scipy.stats import spearmanr
@@ -22,22 +38,9 @@ from sklearn.metrics import mean_absolute_error
 # SETTINGS
 # ============================================================
 
-DATA_FOLDER = "data/MERP"
-
-INPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "modelling_dataset.csv"
-)
-
-PREDICTIONS_FILE = os.path.join(
-    DATA_FOLDER,
-    "nested_cv_predictions.csv"
-)
-
-OUTPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "audio_permutation_results.csv"
-)
+INPUT_FILE = PROCESSED_DIR / "modelling_dataset.csv"
+PREDICTIONS_FILE = TABLES_DIR / "nested_cv_predictions.csv"
+OUTPUT_FILE = TABLES_DIR / "audio_permutation_results.csv"
 
 RANDOM_SEED = 42
 
@@ -506,10 +509,7 @@ plt.legend()
 plt.tight_layout()
 
 
-plot_path = os.path.join(
-    DATA_FOLDER,
-    "audio_permutation_test.png"
-)
+plot_path = FIGURES_DIR / "audio_permutation_test.png"
 
 
 plt.savefig(

@@ -1,6 +1,22 @@
-import os
 import numpy as np
 import pandas as pd
+from pathlib import Path
+
+# ============================================================
+# PROJECT PATHS
+# ============================================================
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+RESULTS_DIR = PROJECT_ROOT / "results"
+TABLES_DIR = RESULTS_DIR / "tables"
+FIGURES_DIR = RESULTS_DIR / "figures"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
 import matplotlib.pyplot as plt
 
 from scipy.stats import spearmanr, pearsonr
@@ -10,12 +26,7 @@ from scipy.stats import spearmanr, pearsonr
 # SETTINGS
 # ============================================================
 
-DATA_FOLDER = "data/MERP"
-
-INPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "annotations_filtered.parquet"
-)
+INPUT_FILE = DATA_DIR / "annotations_filtered.parquet"
 
 N_REPEATS = 1000
 TOP_K = 10
@@ -384,20 +395,14 @@ print(
 # SAVE RESULTS
 # ============================================================
 
-results_path = os.path.join(
-    DATA_FOLDER,
-    "split_half_reliability.csv"
-)
+results_path = TABLES_DIR / "split_half_reliability.csv"
 
 results_df.to_csv(
     results_path,
     index=False
 )
 
-split_scores_path = os.path.join(
-    DATA_FOLDER,
-    "split_half_song_scores.csv"
-)
+split_scores_path = TABLES_DIR / "split_half_song_scores.csv"
 
 split_scores_df.to_csv(
     split_scores_path,
@@ -441,10 +446,7 @@ plt.title(
 plt.legend()
 plt.tight_layout()
 
-plot1_path = os.path.join(
-    DATA_FOLDER,
-    "split_half_spearman_distribution.png"
-)
+plot1_path = FIGURES_DIR / "split_half_spearman_distribution.png"
 
 plt.savefig(
     plot1_path,
@@ -509,10 +511,7 @@ plt.title(
 
 plt.tight_layout()
 
-plot2_path = os.path.join(
-    DATA_FOLDER,
-    "split_half_representative_scatter.png"
-)
+plot2_path = FIGURES_DIR / "split_half_representative_scatter.png"
 
 plt.savefig(
     plot2_path,

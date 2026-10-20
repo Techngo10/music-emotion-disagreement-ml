@@ -1,12 +1,17 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
+from pathlib import Path
 
-DATA_FOLDER = "data/MERP"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+FIGURES_DIR = PROJECT_ROOT / "results" / "figures"
 
-songs = pd.read_csv(
-    os.path.join(DATA_FOLDER, "song_disagreement_summary.csv")
-)
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
+
+songs = pd.read_csv(PROCESSED_DIR / "song_disagreement_summary.csv")
 
 # ---------------------------------------------------------
 # GRAPH 1
@@ -28,7 +33,7 @@ plt.title("Distribution of Emotional Disagreement Across Songs")
 plt.tight_layout()
 
 plt.savefig(
-    os.path.join(DATA_FOLDER, "disagreement_distribution.png"),
+    FIGURES_DIR / "disagreement_distribution.png",
     dpi=300
 )
 
@@ -54,7 +59,7 @@ plt.title("Valence vs Arousal Disagreement")
 plt.tight_layout()
 
 plt.savefig(
-    os.path.join(DATA_FOLDER, "valence_vs_arousal.png"),
+    FIGURES_DIR / "valence_vs_arousal.png",
     dpi=300
 )
 
@@ -80,7 +85,7 @@ plt.title("Number of Raters vs Emotional Disagreement")
 plt.tight_layout()
 
 plt.savefig(
-    os.path.join(DATA_FOLDER, "raters_vs_disagreement.png"),
+    FIGURES_DIR / "raters_vs_disagreement.png",
     dpi=300
 )
 
@@ -120,7 +125,7 @@ plt.title("Songs with Highest and Lowest Emotional Disagreement")
 plt.tight_layout()
 
 plt.savefig(
-    os.path.join(DATA_FOLDER, "highest_lowest_disagreement.png"),
+    FIGURES_DIR / "highest_lowest_disagreement.png",
     dpi=300
 )
 

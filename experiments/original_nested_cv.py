@@ -1,6 +1,17 @@
-import os
 import numpy as np
 import pandas as pd
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+TABLES_DIR = PROJECT_ROOT / "results" / "tables"
+EXPERIMENT_OUTPUT_DIR = PROJECT_ROOT / "experiments" / "output"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
+EXPERIMENT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
 
 from scipy.stats import spearmanr
 
@@ -26,17 +37,8 @@ from sklearn.metrics import (
 # SETTINGS
 # ============================================================
 
-DATA_FOLDER = "data/MERP"
-
-INPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "modelling_dataset.csv"
-)
-
-OUTPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "nested_cv_predictions.csv"
-)
+INPUT_FILE = PROCESSED_DIR / "modelling_dataset.csv"
+OUTPUT_FILE = EXPERIMENT_OUTPUT_DIR / "original_nested_cv_predictions.csv"
 
 RANDOM_SEED = 42
 
@@ -627,10 +629,7 @@ predictions.to_csv(
     index=False
 )
 
-results_path = os.path.join(
-    DATA_FOLDER,
-    "nested_cv_results.csv"
-)
+results_path = EXPERIMENT_OUTPUT_DIR / "original_nested_cv_results.csv"
 
 results_df.to_csv(
     results_path,

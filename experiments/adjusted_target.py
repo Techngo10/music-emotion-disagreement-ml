@@ -1,6 +1,17 @@
-import os
 import numpy as np
 import pandas as pd
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+TABLES_DIR = PROJECT_ROOT / "results" / "tables"
+EXPERIMENT_OUTPUT_DIR = PROJECT_ROOT / "experiments" / "output"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
+EXPERIMENT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
 from scipy.stats import spearmanr, pearsonr
 
 
@@ -8,17 +19,8 @@ from scipy.stats import spearmanr, pearsonr
 # SETTINGS
 # ============================================================
 
-DATA_FOLDER = "data/MERP"
-
-INPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "annotations_filtered.parquet"
-)
-
-OUTPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "adjusted_disagreement.csv"
-)
+INPUT_FILE = DATA_DIR / "annotations_filtered.parquet"
+OUTPUT_FILE = EXPERIMENT_OUTPUT_DIR / "adjusted_disagreement.csv"
 
 N_REPEATS = 1000
 RANDOM_SEED = 42

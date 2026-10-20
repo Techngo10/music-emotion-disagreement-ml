@@ -1,6 +1,22 @@
-import os
 import numpy as np
 import pandas as pd
+from pathlib import Path
+
+# ============================================================
+# PROJECT PATHS
+# ============================================================
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+RESULTS_DIR = PROJECT_ROOT / "results"
+TABLES_DIR = RESULTS_DIR / "tables"
+FIGURES_DIR = RESULTS_DIR / "figures"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
 
 from scipy.stats import spearmanr, pearsonr
 
@@ -9,12 +25,7 @@ from scipy.stats import spearmanr, pearsonr
 # SETTINGS
 # ============================================================
 
-DATA_FOLDER = "data/MERP"
-
-INPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "annotations_filtered.parquet"
-)
+INPUT_FILE = DATA_DIR / "annotations_filtered.parquet"
 
 N_REPEATS = 1000
 RANDOM_SEED = 42
@@ -488,20 +499,9 @@ summary = pd.DataFrame(
 # SAVE
 # ============================================================
 
-song_path = os.path.join(
-    DATA_FOLDER,
-    "target_diagnostics_songs.csv"
-)
-
-correlation_path = os.path.join(
-    DATA_FOLDER,
-    "target_confound_correlations.csv"
-)
-
-reliability_path = os.path.join(
-    DATA_FOLDER,
-    "target_reliability_comparison.csv"
-)
+song_path = PROCESSED_DIR / "target_diagnostics_songs.csv"
+correlation_path = TABLES_DIR / "target_confound_correlations.csv"
+reliability_path = TABLES_DIR / "target_reliability_comparison.csv"
 
 
 song_data.to_csv(

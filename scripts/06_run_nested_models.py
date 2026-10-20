@@ -1,49 +1,45 @@
-import os
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-
 from scipy.stats import spearmanr
 
 from sklearn.compose import ColumnTransformer
+from sklearn.decomposition import PCA
+from sklearn.linear_model import Ridge
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import GridSearchCV, KFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
 
-from sklearn.linear_model import Ridge
-from sklearn.svm import SVR
 
-from sklearn.model_selection import (
-    KFold,
-    GridSearchCV
-)
+# ============================================================
+# PROJECT PATHS
+# ============================================================
 
-from sklearn.metrics import (
-    mean_absolute_error,
-    mean_squared_error,
-    r2_score
-)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+TABLES_DIR = PROJECT_ROOT / "results" / "tables"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================
 # SETTINGS
 # ============================================================
 
-DATA_FOLDER = "data/MERP"
+INPUT_FILE = PROCESSED_DIR / "modelling_dataset.csv"
+OUTPUT_PREDICTIONS = TABLES_DIR / "nested_cv_predictions.csv"
+OUTPUT_RESULTS = TABLES_DIR / "nested_cv_results.csv"
 
-INPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "modelling_dataset.csv"
-)
-
-OUTPUT_PREDICTIONS = os.path.join(
-    DATA_FOLDER,
-    "corrected_combined_predictions.csv"
-)
-
-OUTPUT_RESULTS = os.path.join(
-    DATA_FOLDER,
-    "corrected_combined_results.csv"
-)
+TARGET = "overall_disagreement"
+CONTROL_COLUMNS = [
+    "mean_valence",
+    "mean_arousal",
+    "n_raters",
+]
 
 RANDOM_SEED = 42
 
@@ -54,20 +50,7 @@ RANDOM_SEED = 42
 
 df = pd.read_csv(INPUT_FILE)
 
-TARGET = "overall_disagreement"
-
-CONTROL_COLUMNS = [
-    "mean_valence",
-    "mean_arousal",
-    "n_raters"
-]
-
-
-# ============================================================
-# IDENTIFY AUDIO FEATURES
-# ============================================================
-
-non_audio_columns = {
+NON_AUDIO_COLUMNS = {
     "song_id",
     "n_raters",
     "mean_valence",
@@ -76,246 +59,98 @@ non_audio_columns = {
     "arousal_extremity",
     "valence_disagreement",
     "arousal_disagreement",
-    "overall_disagreement"
+    "overall_disagreement",
 }
 
 AUDIO_COLUMNS = [
-    c for c in df.columns
-    if c not in non_audio_columns
+    column
+    for column in df.columns
+    if column not in NON_AUDIO_COLUMNS
 ]
 
-ALL_COLUMNS = (
-    AUDIO_COLUMNS
-    + CONTROL_COLUMNS
-)
+X_audio = df[AUDIO_COLUMNS]
+X_controls = df[CONTROL_COLUMNS]
+X_combined = df[AUDIO_COLUMNS + CONTROL_COLUMNS]
+y = df[TARGET].to_numpy()
 
 print("=" * 70)
-print("CORRECTED AUDIO + CONTROLS ANALYSIS")
+print("FINAL NESTED CROSS-VALIDATION")
 print("=" * 70)
-
 print("Songs:", len(df))
 print("Audio features:", len(AUDIO_COLUMNS))
 print("Controls:", CONTROL_COLUMNS)
 
 
 # ============================================================
-# DATA
-# ============================================================
-
-X = df[ALL_COLUMNS]
-X_controls = df[CONTROL_COLUMNS]
-
-y = df[TARGET].to_numpy()
-
-
-# ============================================================
-# OUTER AND INNER CV
+# CROSS-VALIDATION
 # ============================================================
 
 outer_cv = KFold(
     n_splits=5,
     shuffle=True,
-    random_state=RANDOM_SEED
+    random_state=RANDOM_SEED,
 )
 
 inner_cv = KFold(
     n_splits=4,
     shuffle=True,
-    random_state=RANDOM_SEED
+    random_state=RANDOM_SEED,
 )
 
 
 # ============================================================
-# PREPROCESSING
-#
-# AUDIO:
-#   standardise -> PCA
-#
-# CONTROLS:
-#   standardise only
-#
-# The controls are NOT included in PCA.
+# MODEL PIPELINES
 # ============================================================
 
-audio_pipeline = Pipeline([
-    (
-        "scale",
-        StandardScaler()
-    ),
-    (
-        "pca",
-        PCA()
-    )
+# Audio-only: scale -> PCA -> Ridge
+audio_ridge = Pipeline([
+    ("scale", StandardScaler()),
+    ("pca", PCA()),
+    ("model", Ridge()),
 ])
 
+audio_ridge_grid = {
+    "pca__n_components": [0.80, 0.90, 0.95],
+    "model__alpha": [0.01, 0.1, 1, 10, 100],
+}
+
+# Controls-only: scale -> Ridge
+controls_ridge = Pipeline([
+    ("scale", StandardScaler()),
+    ("model", Ridge()),
+])
+
+controls_ridge_grid = {
+    "model__alpha": [0.001, 0.01, 0.1, 1, 10, 100],
+}
+
+# Combined model: PCA is applied ONLY to audio.
+audio_preprocessing = Pipeline([
+    ("scale", StandardScaler()),
+    ("pca", PCA()),
+])
 
 combined_preprocessor = ColumnTransformer([
     (
         "audio",
-        audio_pipeline,
-        AUDIO_COLUMNS
+        audio_preprocessing,
+        AUDIO_COLUMNS,
     ),
     (
         "controls",
         StandardScaler(),
-        CONTROL_COLUMNS
-    )
-])
-
-
-# ============================================================
-# MODEL 1:
-# CONTROLS-ONLY RIDGE
-# ============================================================
-
-controls_ridge = Pipeline([
-    (
-        "scale",
-        StandardScaler()
+        CONTROL_COLUMNS,
     ),
-    (
-        "model",
-        Ridge()
-    )
 ])
-
-controls_ridge_grid = {
-    "model__alpha": [
-        0.001,
-        0.01,
-        0.1,
-        1,
-        10,
-        100
-    ]
-}
-
-
-# ============================================================
-# MODEL 2:
-# CONTROLS-ONLY SVR
-#
-# Useful because later we compare it against
-# Audio + Controls SVR using the SAME model family.
-# ============================================================
-
-controls_svr = Pipeline([
-    (
-        "scale",
-        StandardScaler()
-    ),
-    (
-        "model",
-        SVR(
-            kernel="rbf"
-        )
-    )
-])
-
-controls_svr_grid = {
-
-    "model__C": [
-        0.1,
-        1,
-        10,
-        100
-    ],
-
-    "model__gamma": [
-        "scale",
-        0.01,
-        0.1
-    ],
-
-    "model__epsilon": [
-        0.005,
-        0.01,
-        0.02,
-        0.05
-    ]
-}
-
-
-# ============================================================
-# MODEL 3:
-# AUDIO + CONTROLS RIDGE
-# ============================================================
 
 combined_ridge = Pipeline([
-    (
-        "preprocess",
-        combined_preprocessor
-    ),
-    (
-        "model",
-        Ridge()
-    )
+    ("preprocess", combined_preprocessor),
+    ("model", Ridge()),
 ])
 
 combined_ridge_grid = {
-
-    "preprocess__audio__pca__n_components": [
-        0.80,
-        0.90,
-        0.95
-    ],
-
-    "model__alpha": [
-        0.001,
-        0.01,
-        0.1,
-        1,
-        10,
-        100
-    ]
-}
-
-
-# ============================================================
-# MODEL 4:
-# AUDIO + CONTROLS SVR
-# ============================================================
-
-combined_svr = Pipeline([
-    (
-        "preprocess",
-        combined_preprocessor
-    ),
-    (
-        "model",
-        SVR(
-            kernel="rbf"
-        )
-    )
-])
-
-combined_svr_grid = {
-
-    "preprocess__audio__pca__n_components": [
-        0.80,
-        0.90,
-        0.95
-    ],
-
-    "model__C": [
-        0.1,
-        1,
-        10,
-        100
-    ],
-
-    "model__gamma": [
-        "scale",
-        0.01,
-        0.1
-    ],
-
-    "model__epsilon": [
-        0.005,
-        0.01,
-        0.02,
-        0.05
-    ]
+    "preprocess__audio__pca__n_components": [0.80, 0.90, 0.95],
+    "model__alpha": [0.001, 0.01, 0.1, 1, 10, 100],
 }
 
 
@@ -326,21 +161,10 @@ combined_svr_grid = {
 predictions = pd.DataFrame({
     "song_id": df["song_id"],
     "actual": y,
-
-    "mean_baseline":
-        np.nan,
-
-    "controls_ridge":
-        np.nan,
-
-    "controls_svr":
-        np.nan,
-
-    "audio_controls_ridge":
-        np.nan,
-
-    "audio_controls_svr":
-        np.nan
+    "mean_baseline": np.nan,
+    "audio_ridge": np.nan,
+    "controls_ridge": np.nan,
+    "audio_controls_ridge": np.nan,
 })
 
 
@@ -350,312 +174,178 @@ predictions = pd.DataFrame({
 
 for fold, (train_idx, test_idx) in enumerate(
     outer_cv.split(df),
-    start=1
+    start=1,
 ):
-
     print("\n" + "=" * 70)
     print(f"OUTER FOLD {fold}/5")
     print("=" * 70)
 
     y_train = y[train_idx]
 
-    X_train = X.iloc[train_idx]
-    X_test = X.iloc[test_idx]
-
-    controls_train = X_controls.iloc[
-        train_idx
-    ]
-
-    controls_test = X_controls.iloc[
-        test_idx
-    ]
-
+    # --------------------------------------------------------
+    # Mean baseline
+    # --------------------------------------------------------
+    predictions.loc[test_idx, "mean_baseline"] = np.mean(y_train)
 
     # --------------------------------------------------------
-    # MEAN BASELINE
+    # Audio-only Ridge
     # --------------------------------------------------------
-
-    predictions.loc[
-        test_idx,
-        "mean_baseline"
-    ] = np.mean(y_train)
-
-
-    # --------------------------------------------------------
-    # CONTROLS RIDGE
-    # --------------------------------------------------------
-
-    search = GridSearchCV(
-        controls_ridge,
-        controls_ridge_grid,
-
+    audio_search = GridSearchCV(
+        estimator=audio_ridge,
+        param_grid=audio_ridge_grid,
         scoring="neg_mean_absolute_error",
-
         cv=inner_cv,
-        n_jobs=-1
+        n_jobs=-1,
     )
 
-    search.fit(
-        controls_train,
-        y_train
+    audio_search.fit(
+        X_audio.iloc[train_idx],
+        y_train,
     )
 
-    predictions.loc[
-        test_idx,
-        "controls_ridge"
-    ] = search.predict(
-        controls_test
+    predictions.loc[test_idx, "audio_ridge"] = audio_search.predict(
+        X_audio.iloc[test_idx]
     )
 
-    print(
-        "Controls Ridge:",
-        search.best_params_
-    )
-
+    print("Audio Ridge:", audio_search.best_params_)
 
     # --------------------------------------------------------
-    # CONTROLS SVR
+    # Controls-only Ridge
     # --------------------------------------------------------
-
-    search = GridSearchCV(
-        controls_svr,
-        controls_svr_grid,
-
+    controls_search = GridSearchCV(
+        estimator=controls_ridge,
+        param_grid=controls_ridge_grid,
         scoring="neg_mean_absolute_error",
-
         cv=inner_cv,
-        n_jobs=-1
+        n_jobs=-1,
     )
 
-    search.fit(
-        controls_train,
-        y_train
+    controls_search.fit(
+        X_controls.iloc[train_idx],
+        y_train,
     )
 
-    predictions.loc[
-        test_idx,
-        "controls_svr"
-    ] = search.predict(
-        controls_test
+    predictions.loc[test_idx, "controls_ridge"] = controls_search.predict(
+        X_controls.iloc[test_idx]
     )
 
-    print(
-        "Controls SVR:",
-        search.best_params_
-    )
-
+    print("Controls Ridge:", controls_search.best_params_)
 
     # --------------------------------------------------------
-    # AUDIO + CONTROLS RIDGE
+    # Audio + controls Ridge
     # --------------------------------------------------------
-
-    search = GridSearchCV(
-        combined_ridge,
-        combined_ridge_grid,
-
+    combined_search = GridSearchCV(
+        estimator=combined_ridge,
+        param_grid=combined_ridge_grid,
         scoring="neg_mean_absolute_error",
-
         cv=inner_cv,
-        n_jobs=-1
+        n_jobs=-1,
     )
 
-    search.fit(
-        X_train,
-        y_train
+    combined_search.fit(
+        X_combined.iloc[train_idx],
+        y_train,
     )
 
-    predictions.loc[
-        test_idx,
-        "audio_controls_ridge"
-    ] = search.predict(
-        X_test
+    predictions.loc[test_idx, "audio_controls_ridge"] = combined_search.predict(
+        X_combined.iloc[test_idx]
     )
 
-    print(
-        "Audio + Controls Ridge:",
-        search.best_params_
-    )
-
-
-    # --------------------------------------------------------
-    # AUDIO + CONTROLS SVR
-    # --------------------------------------------------------
-
-    search = GridSearchCV(
-        combined_svr,
-        combined_svr_grid,
-
-        scoring="neg_mean_absolute_error",
-
-        cv=inner_cv,
-        n_jobs=-1
-    )
-
-    search.fit(
-        X_train,
-        y_train
-    )
-
-    predictions.loc[
-        test_idx,
-        "audio_controls_svr"
-    ] = search.predict(
-        X_test
-    )
-
-    print(
-        "Audio + Controls SVR:",
-        search.best_params_
-    )
+    print("Audio + Controls Ridge:", combined_search.best_params_)
 
 
 # ============================================================
-# EVALUATION FUNCTION
+# EVALUATION
 # ============================================================
 
 def evaluate(actual, predicted):
+    """Return the project evaluation metrics for one set of predictions."""
 
-    mae = mean_absolute_error(
-        actual,
-        predicted
-    )
-
-    rmse = np.sqrt(
-        mean_squared_error(
-            actual,
-            predicted
-        )
-    )
-
-    r2 = r2_score(
-        actual,
-        predicted
-    )
-
-    rho, p = spearmanr(
-        actual,
-        predicted
-    )
+    mae = mean_absolute_error(actual, predicted)
+    rmse = np.sqrt(mean_squared_error(actual, predicted))
+    r2 = r2_score(actual, predicted)
+    rho, p_value = spearmanr(actual, predicted)
 
     return {
         "MAE": mae,
         "RMSE": rmse,
         "R2": r2,
         "Spearman": rho,
-        "Spearman_p": p
+        "Spearman_p": p_value,
     }
 
 
-# ============================================================
-# RESULTS
-# ============================================================
-
-models = [
+MODEL_COLUMNS = [
     "mean_baseline",
+    "audio_ridge",
     "controls_ridge",
-    "controls_svr",
     "audio_controls_ridge",
-    "audio_controls_svr"
 ]
 
 results = []
 
-
-for model in models:
-
+for model_name in MODEL_COLUMNS:
     metrics = evaluate(
         predictions["actual"],
-        predictions[model]
+        predictions[model_name],
     )
 
     results.append({
-        "model": model,
-        **metrics
+        "model": model_name,
+        **metrics,
     })
 
-
-results_df = pd.DataFrame(
-    results
-)
-
+results_df = pd.DataFrame(results)
 
 print("\n" + "=" * 70)
-print("CORRECTED OUT-OF-SAMPLE RESULTS")
+print("OUT-OF-SAMPLE RESULTS")
 print("=" * 70)
-
 print(
     results_df.to_string(
         index=False,
-        float_format=lambda x: f"{x:.4f}"
+        float_format=lambda value: f"{value:.4f}",
     )
 )
 
 
 # ============================================================
-# AUDIO ADDED VALUE
+# KEY COMPARISONS
 # ============================================================
+
+mean_mae = results_df.loc[
+    results_df["model"] == "mean_baseline",
+    "MAE",
+].iloc[0]
+
+audio_mae = results_df.loc[
+    results_df["model"] == "audio_ridge",
+    "MAE",
+].iloc[0]
+
+controls_mae = results_df.loc[
+    results_df["model"] == "controls_ridge",
+    "MAE",
+].iloc[0]
+
+combined_mae = results_df.loc[
+    results_df["model"] == "audio_controls_ridge",
+    "MAE",
+].iloc[0]
 
 print("\n" + "=" * 70)
-print("DO AUDIO FEATURES ADD VALUE?")
+print("KEY MAE COMPARISONS")
 print("=" * 70)
 
-
-def compare_models(
-    base_model,
-    combined_model
-):
-
-    base_mae = results_df.loc[
-        results_df["model"] == base_model,
-        "MAE"
-    ].iloc[0]
-
-    combined_mae = results_df.loc[
-        results_df["model"] == combined_model,
-        "MAE"
-    ].iloc[0]
-
-    improvement = (
-        base_mae
-        - combined_mae
-    )
-
-    percent = (
-        improvement
-        / base_mae
-        * 100
-    )
-
-    print(
-        f"\n{base_model}"
-        f" -> {combined_model}"
-    )
-
-    print(
-        f"Base MAE:     {base_mae:.4f}"
-    )
-
-    print(
-        f"Combined MAE: {combined_mae:.4f}"
-    )
-
-    print(
-        f"Difference:   {improvement:+.4f}"
-    )
-
-    print(
-        f"Change:       {percent:+.1f}%"
-    )
-
-
-compare_models(
-    "controls_ridge",
-    "audio_controls_ridge"
+print(
+    "Audio vs mean baseline: "
+    f"{mean_mae - audio_mae:+.6f} "
+    f"({(mean_mae - audio_mae) / mean_mae * 100:+.1f}%)"
 )
 
-compare_models(
-    "controls_svr",
-    "audio_controls_svr"
+print(
+    "Audio + controls vs controls: "
+    f"{controls_mae - combined_mae:+.6f} "
+    f"({(controls_mae - combined_mae) / controls_mae * 100:+.1f}%)"
 )
 
 
@@ -665,12 +355,12 @@ compare_models(
 
 predictions.to_csv(
     OUTPUT_PREDICTIONS,
-    index=False
+    index=False,
 )
 
 results_df.to_csv(
     OUTPUT_RESULTS,
-    index=False
+    index=False,
 )
 
 print("\nSaved:")

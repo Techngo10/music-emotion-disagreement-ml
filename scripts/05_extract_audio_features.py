@@ -1,4 +1,3 @@
-import os
 import platform
 
 # Fix for ARM64 Windows running x64 Python.
@@ -12,28 +11,32 @@ platform.machine = _original_machine
 
 import numpy as np
 import pandas as pd
+from pathlib import Path
+
+# ============================================================
+# PROJECT PATHS
+# ============================================================
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data" / "MERP"
+PROCESSED_DIR = DATA_DIR / "processed"
+RESULTS_DIR = PROJECT_ROOT / "results"
+TABLES_DIR = RESULTS_DIR / "tables"
+FIGURES_DIR = RESULTS_DIR / "figures"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
 
 # ============================================================
 # SETTINGS
 # ============================================================
 
-DATA_FOLDER = "data/MERP"
-AUDIO_FOLDER = os.path.join(DATA_FOLDER, "audio")
-
-TARGET_FILE = os.path.join(
-    DATA_FOLDER,
-    "target_diagnostics_songs.csv"
-)
-
-OUTPUT_FILE = os.path.join(
-    DATA_FOLDER,
-    "audio_features_260.csv"
-)
-
-FINAL_FILE = os.path.join(
-    DATA_FOLDER,
-    "modelling_dataset.csv"
-)
+AUDIO_FOLDER = DATA_DIR / "audio"
+TARGET_FILE = PROCESSED_DIR / "target_diagnostics_songs.csv"
+OUTPUT_FILE = PROCESSED_DIR / "audio_features_260.csv"
+FINAL_FILE = PROCESSED_DIR / "modelling_dataset.csv"
 
 # IS13 uses frame-level low-level descriptors.
 smile = opensmile.Smile(
@@ -65,12 +68,9 @@ missing_audio = []
 
 for song_id in songs:
 
-    path = os.path.join(
-        AUDIO_FOLDER,
-        f"{song_id}.wav"
-    )
+    path = AUDIO_FOLDER / f"{song_id}.wav"
 
-    if not os.path.exists(path):
+    if not path.exists():
         missing_audio.append(song_id)
 
 if missing_audio:
@@ -186,10 +186,7 @@ for number, song_id in enumerate(
     start=1
 ):
 
-    audio_path = os.path.join(
-        AUDIO_FOLDER,
-        f"{song_id}.wav"
-    )
+    audio_path = AUDIO_FOLDER / f"{song_id}.wav"
 
     print(
         f"\n[{number}/{len(songs)}] {song_id}"
